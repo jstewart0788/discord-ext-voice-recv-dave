@@ -147,11 +147,23 @@ class PacketDecoder:
             member = self._get_cached_member()
 
         if has_dave and not packet.is_silence() and packet.decrypted_data is not None and self.vc._connection.dave_session is not None and self.vc._connection.dave_session.ready:
+            if member is None:
+                # SSRC -> member resolution failed; can't derive sender key.
+                # Log so the caller can count member-resolution misses separately
+                # from genuine decrypt failures.
+                log.debug("DAVE decrypt skipped: no member for ssrc=%s", self.ssrc)
+                self._last_seq = packet.sequence
+                self._last_ts = packet.timestamp
+                return VoiceData(packet, None, pcm=b'')
             try:
                 packet.decrypted_data = self.vc._connection.dave_session.decrypt(member.id, MediaType.audio,
                                                                                 bytes(
                                                                                     packet.decrypted_data))  # type: ignore
-            except:
+            except Exception as e:
+                # Catch Exception (not BaseException) so KeyboardInterrupt /
+                # SystemExit still propagate. Log at debug; callers can build
+                # a decrypt-failure rate metric from these.
+                log.debug("DAVE decrypt failed for member %s: %s", member.id, e)
                 self._last_seq = packet.sequence
                 self._last_ts = packet.timestamp
                 return VoiceData(packet, None, pcm=b'')
@@ -172,7 +184,10 @@ class PacketDecoder:
         if packet:
             try:
                 pcm = self._decoder.decode(packet.decrypted_data, fec=False)
-            except:
+            except Exception as e:
+                # Bad opus frame — fall back to FEC reconstruct.
+                # Catch Exception (not BaseException) so interrupts propagate.
+                log.debug("opus decode failed (ssrc=%s, seq=%s): %s — falling back to FEC", self.ssrc, packet.sequence, e)
                 pcm = self._decoder.decode(None, fec=False)
             return packet, pcm
 
