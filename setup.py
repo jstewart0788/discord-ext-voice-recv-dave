@@ -38,13 +38,13 @@ extras_require = {
 }
 
 setup(
-    name='discord-ext-voice_recv',
-    author='Imayhaveborkedit',
-    url='https://github.com/imayhaveborkedit/discord-ext-voice-recv',
+    name='discord-ext-voice-recv-dave',
+    author='Imayhaveborkedit (upstream); jstewart0788 (fork maintainer)',
+    url='https://github.com/jstewart0788/discord-ext-voice-recv-dave',
     version=version,
     packages=['discord.ext.voice_recv', 'discord.ext.voice_recv.extras'],
     license='MIT',
-    description='Experimental voice receive extension for discord.py',
+    description='Voice receive extension for discord.py — fork carrying community PR #54 for DAVE receive support. See FORK_RATIONALE.md.',
     long_description=readme,
     long_description_content_type='text/markdown',
     include_package_data=True,
